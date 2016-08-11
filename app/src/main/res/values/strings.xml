@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">BicycleKaraoke</string>
+    <string name="action_settings">Settings</string>
+    <string name="section_format">Hello World from section: %1$d</string>
+    <string name="title_activity_settings">Settings</string>
+    <string name="title_activity_main">BicycleKaraoke</string>
+    <string name="dummy_button">Start run</string>
+    <string name="dummy_content">ALLZEIT\nBEREIT</string>
+</resources>

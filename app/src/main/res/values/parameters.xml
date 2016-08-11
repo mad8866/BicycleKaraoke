@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="sample_freq_titles">
+        <item>48k Hz</item>
+        <item>44.1k Hz</item>
+        <item>22.05k Hz</item>
+        <item>16k Hz</item>
+        <item>8k Hz</item>
+    </string-array>
+    <string-array name="sample_freq_values">
+        <item>48000</item>
+        <item>44100</item>
+        <item>22050</item>
+        <item>16000</item>
+        <item>8000</item>
+    </string-array>
+</resources>
