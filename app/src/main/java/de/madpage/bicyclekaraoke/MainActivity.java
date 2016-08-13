@@ -6,12 +6,16 @@ import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 import android.widget.Toolbar;
+import android.widget.VideoView;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -107,10 +111,47 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        final Button start_button = (Button) findViewById(R.id.start_button);
+        final Button stop_button = (Button) findViewById(R.id.stop_button);
         // Upon interacting with UI controls, delay any scheduled hide()
         // operations to prevent the jarring behavior of controls going away
         // while interacting with the UI.
-        findViewById(R.id.dummy_button).setOnTouchListener(mDelayHideTouchListener);
+        start_button.setOnTouchListener(mDelayHideTouchListener);
+
+        final VideoView videoView = (VideoView) findViewById(R.id.videoView);
+
+
+
+        start_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                videoView.setVideoPath("/sdcard/video/hierKommt.mp4");
+                videoView.start();
+                videoView.setAlpha(1);
+                soundmeter.start();
+            }
+        });
+
+        stop_button.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                videoView.stopPlayback();
+                videoView.setAlpha(0);
+                soundmeter.stop();
+            }
+        });
+
+
+        tv_status = (TextView) findViewById(R.id.tv_status);
+        tv_status.setText("Waiting for initialization");
+
+        uiUpdateHandler.post(uiUpdateHandlerCode);
+
+        if (BuildConfig.DEBUG) {
+            // do something for a debug build
+            videoView.setVideoPath("/sdcard/video/hierKommt.mp4");
+            videoView.start();
+            videoView.setAlpha(1);
+            soundmeter.start();
+        }
 
     }
 
@@ -153,6 +194,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void hide() {
+        if (BuildConfig.DEBUG || !BuildConfig.DEBUG) {
+            //disable hide
+            return;
+        }
+
         // Hide UI first
         ActionBar actionBar = getSupportActionBar();
         if (actionBar != null) {
@@ -185,5 +231,31 @@ public class MainActivity extends AppCompatActivity {
     private void delayedHide(int delayMillis) {
         mHideHandler.removeCallbacks(mHideRunnable);
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
+    }
+
+    public final int UI_UPDATE_FREQENCY = 10;
+    private TextView tv_status;
+    private SoundMeter soundmeter = new SoundMeter();
+    private Handler uiUpdateHandler = new Handler();
+    private Runnable uiUpdateHandlerCode = new Runnable() {
+        @Override
+        public void run() {
+            refreshUi();
+            uiUpdateHandler.postDelayed(uiUpdateHandlerCode, 1000 / UI_UPDATE_FREQENCY);
+        }
+    };
+
+    protected void refreshUi() {
+        String currentStatus = "HEY!\nMake some noise :-P";
+
+        if (soundmeter.getLoudness() > soundmeter.LOUDNESS_THRESHOLD_AMP) {
+            Log.d("zeroCrossings", "calc_frequency:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" + soundmeter.getLoudness());
+
+            if (soundmeter.isLoudEnough()) {
+                currentStatus = ("RAW_SAMPLE_FREQUENCY:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" +soundmeter.getLoudness());
+            }
+        }
+
+        tv_status.setText(currentStatus);
     }
 }

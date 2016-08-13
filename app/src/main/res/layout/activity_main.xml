@@ -18,6 +18,7 @@
     <!-- The primary full-screen view. This can be replaced with whatever view
          is needed to present your content, e.g. VideoView, SurfaceView,
          TextureView, etc. -->
+
     <TextView
         android:id="@+id/fullscreen_content"
         android:layout_width="match_parent"
@@ -31,6 +32,7 @@
 
     <!-- This FrameLayout insets its children based on system windows using
          android:fitsSystemWindows. -->
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -47,14 +49,57 @@
             tools:ignore="UselessParent">
 
             <Button
-                android:id="@+id/dummy_button"
+                android:id="@+id/start_button"
                 style="?metaButtonBarButtonStyle"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/dummy_button" />
+                android:text="@string/start_button" />
+
+            <Button
+                style="?metaButtonBarButtonStyle"
+                android:id="@+id/stop_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="@string/stop_button" />
 
         </LinearLayout>
+
+        <GridLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="right|top"
+            android:id="@+id/fullscreen_layout"
+            android:rowCount="3"
+            android:columnCount="2">
+
+            <VideoView
+                android:layout_width="907dp"
+                android:layout_height="601dp"
+                android:id="@+id/videoView"
+                android:layout_row="0"
+                android:layout_column="0"
+                android:alpha="0" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="New Text"
+                android:id="@+id/tv_status"
+                android:layout_row="0"
+                android:layout_column="1"
+                android:textStyle="bold"
+                android:textSize="24dp" />
+
+            <SeekBar
+                android:layout_width="938dp"
+                android:layout_height="wrap_content"
+                android:id="@+id/seekBar"
+                android:focusable="false" />
+
+        </GridLayout>
+
     </FrameLayout>
 
 </FrameLayout>
