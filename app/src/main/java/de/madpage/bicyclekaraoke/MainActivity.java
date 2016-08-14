@@ -2,6 +2,7 @@ package de.madpage.bicyclekaraoke;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.os.AsyncTask;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -13,6 +14,7 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toolbar;
 import android.widget.VideoView;
@@ -92,6 +94,9 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private VideoView mVideoView;
+    private ProgressBar mProgressBar;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,6 +106,7 @@ public class MainActivity extends AppCompatActivity {
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
+        mVideoView = (VideoView) findViewById(R.id.videoView);
 
 
         // Set up the user interaction to manually show or hide the system UI.
@@ -118,23 +124,23 @@ public class MainActivity extends AppCompatActivity {
         // while interacting with the UI.
         start_button.setOnTouchListener(mDelayHideTouchListener);
 
-        final VideoView videoView = (VideoView) findViewById(R.id.videoView);
+
 
 
 
         start_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                videoView.setVideoPath("/sdcard/video/hierKommt.mp4");
-                videoView.start();
-                videoView.setAlpha(1);
+                mVideoView.setVideoPath("/sdcard/video/hierKommt.mp4");
+                mVideoView.start();
+                mVideoView.setAlpha(1);
                 soundmeter.start();
             }
         });
 
         stop_button.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
-                videoView.stopPlayback();
-                videoView.setAlpha(0);
+                mVideoView.stopPlayback();
+                mVideoView.setAlpha(0);
                 soundmeter.stop();
             }
         });
@@ -147,11 +153,15 @@ public class MainActivity extends AppCompatActivity {
 
         if (BuildConfig.DEBUG) {
             // do something for a debug build
-            videoView.setVideoPath("/sdcard/video/hierKommt.mp4");
-            videoView.start();
-            videoView.setAlpha(1);
+            mVideoView.setVideoPath("/sdcard/video/hierKommt.mp4");
+            mVideoView.start();
+            mVideoView.setAlpha(1);
             soundmeter.start();
         }
+
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
+        mProgressBar.setProgress(0);
+        mProgressBar.setMax(100);
 
     }
 
@@ -242,6 +252,16 @@ public class MainActivity extends AppCompatActivity {
         public void run() {
             refreshUi();
             uiUpdateHandler.postDelayed(uiUpdateHandlerCode, 1000 / UI_UPDATE_FREQENCY);
+
+
+            int current = mVideoView.getCurrentPosition();
+            int duration = mVideoView.getDuration();
+
+            try {
+                mProgressBar.setProgress((int) (current * 100 / duration));
+
+            } catch (Exception e) {
+            }
         }
     };
 

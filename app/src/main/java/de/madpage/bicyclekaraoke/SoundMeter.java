@@ -47,7 +47,7 @@ public class SoundMeter {
     }
 
     public void stop() {
-
+        audioRecord.stop();
     }
 
     public double getCalc_frequency() {
@@ -61,7 +61,7 @@ public class SoundMeter {
     private Runnable signalUpdateHandlerCode = new Runnable() {
         @Override
         public void run() {
-            if (audioRecord.getState()==AudioRecord.STATE_INITIALIZED && audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+            if (audioRecord != null && audioRecord.getState()==AudioRecord.STATE_INITIALIZED && audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
                 refreshSignal();
             } else {
                 Log.d("Handler", "Waiting for Audio Initialization");

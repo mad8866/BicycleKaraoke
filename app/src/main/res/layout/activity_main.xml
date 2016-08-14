@@ -74,13 +74,26 @@
             android:rowCount="3"
             android:columnCount="2">
 
-            <VideoView
+            <FrameLayout
                 android:layout_width="907dp"
                 android:layout_height="601dp"
-                android:id="@+id/videoView"
-                android:layout_row="0"
-                android:layout_column="0"
-                android:alpha="0" />
+                android:id="@+id/videoFrame">
+
+                <VideoView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/videoView"
+                    android:layout_row="0"
+                    android:layout_column="0"
+                    android:alpha="0" />
+
+                <ProgressBar
+                    android:layout_alignParentBottom="true"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="fill_parent"
+                    android:layout_height="10dp"
+                    android:id="@+id/progressBar"/>
+            </FrameLayout>
 
             <TextView
                 android:layout_width="wrap_content"
@@ -91,12 +104,6 @@
                 android:layout_column="1"
                 android:textStyle="bold"
                 android:textSize="24dp" />
-
-            <SeekBar
-                android:layout_width="938dp"
-                android:layout_height="wrap_content"
-                android:id="@+id/seekBar"
-                android:focusable="false" />
 
         </GridLayout>
 
