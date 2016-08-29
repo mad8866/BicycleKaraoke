@@ -27,6 +27,11 @@ public class SoundMeter {
     private int rotating_loudness_pointer = 0;
     private double loudness;
     private double calc_frequency;
+    private boolean isStarted = false;
+
+    public boolean isStarted() {
+        return isStarted;
+    }
 
     Handler signalUpdateHandler = new Handler();
 
@@ -37,6 +42,8 @@ public class SoundMeter {
 
             audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, RAW_SAMPLE_FREQUENCY, channelConfiguration, audioEncoding, bufferSize);
             audioRecord.startRecording();
+            isStarted = true;
+
         } catch (Throwable t) {
             Log.e("AudioRecord", "Recording Failed");
         }
@@ -61,10 +68,12 @@ public class SoundMeter {
     private Runnable signalUpdateHandlerCode = new Runnable() {
         @Override
         public void run() {
-            if (audioRecord != null && audioRecord.getState()==AudioRecord.STATE_INITIALIZED && audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
-                refreshSignal();
-            } else {
-                Log.d("Handler", "Waiting for Audio Initialization");
+            if (isStarted()) {
+                if (audioRecord != null && audioRecord.getState() == AudioRecord.STATE_INITIALIZED && audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
+                    refreshSignal();
+                } else {
+                    Log.d("Handler", "Waiting for Audio Initialization");
+                }
             }
             signalUpdateHandler.postDelayed(signalUpdateHandlerCode, 1000 / SIGNAL_UPDATE_FREQENCY);
         }
