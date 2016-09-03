@@ -1,5 +1,7 @@
 package de.madpage.bicyclekaraoke;
 
+import android.app.AlertDialog;
+import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
@@ -26,16 +28,19 @@ public class MainActivity extends HidableActivity {
     private VideoFinder videoFinder;
     public final int UI_UPDATE_FREQENCY = 10;
     private TextView tv_status;
+    private TextView mVideoOverlay;
     private SoundMeter soundmeter = new SoundMeter();
     private Handler uiUpdateHandler = new Handler();
 
-    //TODO final AlertDialog.Builder alertDialogBuilder = new AlertDialog.Builder(this);
+    AlertDialog.Builder alertDialogBuilder = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        alertDialogBuilder = new AlertDialog.Builder(this);
         videoFinder = new VideoFinder(getContentResolver());
+        mVideoOverlay = (TextView) findViewById(R.id.videoCoverOverlay);
         mVideoView = (VideoView) findViewById(R.id.videoView);
         mVideoView.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             public void onCompletion(MediaPlayer vmp) {
@@ -88,6 +93,7 @@ public class MainActivity extends HidableActivity {
         mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
         mProgressBar.setProgress(0);
         mProgressBar.setMax(100);
+        resetVideoVisibility();
 
     }
 
@@ -123,10 +129,11 @@ public class MainActivity extends HidableActivity {
             mVideoView.start();
             mVideoFrame.setAlpha(1);
             soundmeter.start();
+            resetVideoVisibility();
          } catch (FileNotFoundException e) {
-            //AlertDialog ad = alertDialogBuilder.create();
-            //ad.setMessage(e.getMessage());
-            //ad.show();
+            AlertDialog ad = alertDialogBuilder.create();
+            ad.setMessage(e.getMessage());
+            ad.show();
         }
     }
 
@@ -147,13 +154,6 @@ public class MainActivity extends HidableActivity {
             mProgressBar.setProgress((int) (current * 100 / duration));
         } catch (Exception e) {
         }
-        /*if (TODO http://stackoverflow.com/questions/22931833/oncompletionlistener-in-videoview) {
-            mVideoView.setAlpha(0);
-            soundmeter.stop();
-
-        }*/
-
-
 
         String currentStatus = "HEY!\nMake some noise :-P";
 
@@ -166,5 +166,34 @@ public class MainActivity extends HidableActivity {
         }
 
         tv_status.setText(currentStatus);
+    }
+
+    /**
+     * You will have best visibility if factor == 1.0
+     * @param factor
+     */
+    private void setVideoVisibility(double factor) {
+        double alphaOfCoverOverlay;
+        if (factor <= 1f) {
+            alphaOfCoverOverlay = 1.0 - Math.pow(factor, 16);
+            mVideoOverlay.setBackgroundColor(Color.BLACK);
+            mVideoOverlay.setTextColor(Color.WHITE);
+        } else {
+            alphaOfCoverOverlay = 1.0 - Math.pow(factor - 2, 16);
+            mVideoOverlay.setBackgroundColor(Color.WHITE);
+            mVideoOverlay.setTextColor(Color.BLACK);
+        }
+        if (factor < 0.8f) {
+            mVideoOverlay.setText("FAHR SCHNELLER!!!");
+        } else if (factor > 1.2f) {
+            mVideoOverlay.setText("DU BIST ZU SCHNELL!!!");
+        } else {
+            mVideoOverlay.setText(""); // speed ok
+        }
+        mVideoOverlay.setAlpha((float)alphaOfCoverOverlay);
+    }
+
+    private void resetVideoVisibility() {
+        setVideoVisibility(1.0);
     }
 }

@@ -78,7 +78,8 @@
                 android:layout_width="907dp"
                 android:layout_height="601dp"
                 android:id="@+id/videoFrame"
-                android:alpha="1">
+                android:alpha="1"
+                android:background="#000000">
 
                 <VideoView
                     android:layout_width="match_parent"
@@ -90,6 +91,17 @@
                     android:layout_gravity="center_horizontal|top"
                     android:clickable="true" />
 
+                <TextView
+                    android:layout_width="fill_parent"
+                    android:layout_height="fill_parent"
+                    android:id="@+id/videoCoverOverlay"
+                    android:alpha="0"
+                    android:background="#ffffff"
+                    android:textStyle="bold"
+                    android:textSize="50sp"
+                    android:layout_gravity="center"
+                    android:gravity="bottom|center_horizontal" />
+
                 <ProgressBar
                     android:layout_alignParentBottom="true"
                     style="@android:style/Widget.ProgressBar.Horizontal"
@@ -97,6 +109,7 @@
                     android:layout_height="10dp"
                     android:id="@+id/progressBar"
                     android:layout_gravity="center_horizontal|top" />
+
             </FrameLayout>
 
             <TextView

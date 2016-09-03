@@ -71,8 +71,6 @@ public class SoundMeter {
             if (isStarted()) {
                 if (audioRecord != null && audioRecord.getState() == AudioRecord.STATE_INITIALIZED && audioRecord.getRecordingState() == AudioRecord.RECORDSTATE_RECORDING) {
                     refreshSignal();
-                } else {
-                    Log.d("Handler", "Waiting for Audio Initialization");
                 }
             }
             signalUpdateHandler.postDelayed(signalUpdateHandlerCode, 1000 / SIGNAL_UPDATE_FREQENCY);
