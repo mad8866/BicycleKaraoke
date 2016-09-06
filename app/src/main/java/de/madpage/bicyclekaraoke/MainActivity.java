@@ -15,7 +15,10 @@ import android.widget.TextView;
 import android.widget.VideoView;
 
 import java.io.FileNotFoundException;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.List;
 
 /**
  * This activity shows the video content and further views
@@ -29,7 +32,7 @@ public class MainActivity extends HidableActivity {
     public final int UI_UPDATE_FREQENCY = 10;
     private TextView tv_status;
     private TextView mVideoOverlay;
-    private SoundMeter soundmeter = new SoundMeter();
+    private SoundMeter soundmeter = new SoundMeter(this);
     private Handler uiUpdateHandler = new Handler();
 
     AlertDialog.Builder alertDialogBuilder = null;
@@ -157,13 +160,26 @@ public class MainActivity extends HidableActivity {
 
         String currentStatus = "HEY!\nMake some noise :-P";
 
-        if (soundmeter.getLoudness() > soundmeter.LOUDNESS_THRESHOLD_AMP) {
-            Log.d("zeroCrossings", "calc_frequency:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" + soundmeter.getLoudness());
+        //if (soundmeter.getLoudness() > soundmeter.LOUDNESS_THRESHOLD_AMP) {
+        //    Log.d("zeroCrossings", "calc_frequency:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" + soundmeter.getLoudness());
 
-            if (soundmeter.isLoudEnough()) {
-                currentStatus = ("RAW_SAMPLE_FREQUENCY:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" +soundmeter.getLoudness());
-            }
+        //    if (soundmeter.isLoudEnough()) {
+
+        List<SoundMeter.FftFrequncy> frequencies = soundmeter.getCalc_frequencies();
+        StringBuilder sb = new StringBuilder();
+        sb.append("RAW_SAMPLE_FREQUENCY:\n")
+            .append(soundmeter.getCalc_frequency())
+            .append("\n\n\nloudness:\n")
+            .append(soundmeter.getLoudness())
+            .append("\n\n\nFFT RESULTS:\n");
+        for (SoundMeter.FftFrequncy frequence : frequencies) {
+            sb.append(frequence).append('\n');
         }
+        currentStatus = sb.toString();
+
+
+        //    }
+        //}
 
         tv_status.setText(currentStatus);
     }
