@@ -15,8 +15,6 @@ import android.widget.TextView;
 import android.widget.VideoView;
 
 import java.io.FileNotFoundException;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
@@ -167,11 +165,11 @@ public class MainActivity extends HidableActivity {
 
         List<SoundMeter.FftFrequncy> frequencies = soundmeter.getCalc_frequencies();
         StringBuilder sb = new StringBuilder();
-        sb.append("RAW_SAMPLE_FREQUENCY:\n")
-            .append(soundmeter.getCalc_frequency())
-            .append("\n\n\nloudness:\n")
-            .append(soundmeter.getLoudness())
-            .append("\n\n\nFFT RESULTS:\n");
+        sb.append("Loudness:\n")
+                .append(soundmeter.getLoudness())
+                .append("\n\nMean Frequency:\n")
+                .append(soundmeter.getMostPropableFrequency())
+                .append("\n\nFFT RESULTS:\n");
         for (SoundMeter.FftFrequncy frequence : frequencies) {
             sb.append(frequence).append('\n');
         }

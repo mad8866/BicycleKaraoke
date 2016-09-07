@@ -9,16 +9,13 @@ import android.preference.PreferenceManager;
 import android.util.Log;
 
 import org.apache.commons.math3.stat.StatUtils;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.transform.DftNormalization;
 import org.apache.commons.math3.transform.FastFourierTransformer;
 import org.apache.commons.math3.transform.TransformType;
 import org.apache.commons.math3.complex.Complex;
-import org.apache.commons.math3.linear.
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Formatter;
 import java.util.List;
 
 /**
@@ -26,7 +23,7 @@ import java.util.List;
  */
 public class SoundMeter {
 
-    public final int RAW_SAMPLE_FREQUENCY = 16000;
+    public final int RAW_SAMPLE_FREQUENCY = 22050;
     public final int SIGNAL_UPDATE_FREQENCY = 2000;
     public final int LOUDNESS_WINDOW_SIZE = 10;
     public final int LOUDNESS_THRESHOLD_AMP = 300;
@@ -41,9 +38,10 @@ public class SoundMeter {
     private double [] loudness_window = new double[LOUDNESS_WINDOW_SIZE];
     private int rotating_loudness_pointer = 0;
     private double loudness;
-    private double calc_frequency;
     private boolean isStarted = false;
     private List<FftFrequncy> calc_frequencies = new ArrayList<FftFrequncy>();
+    private double mostPropableFrequency = 0.0;
+    private DescriptiveStatistics mostPropableFrequencyStats;
 
     public SoundMeter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
@@ -56,6 +54,9 @@ public class SoundMeter {
     Handler signalUpdateHandler = new Handler();
 
     public void start() {
+        mostPropableFrequencyStats = new DescriptiveStatistics();
+        mostPropableFrequencyStats.setWindowSize(20);
+
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(mainActivity);
         String samplingFrequency = sharedPrefs.getString("pref_key_raw_update_freq", "44100");
         // TODO
@@ -96,9 +97,7 @@ public class SoundMeter {
         audioRecord.stop();
     }
 
-    public double getCalc_frequency() {
-        return calc_frequency;
-    }
+    public double getMostPropableFrequency() { return mostPropableFrequency; }
 
     public List<FftFrequncy> getCalc_frequencies() { return calc_frequencies; }
 
@@ -129,19 +128,14 @@ public class SoundMeter {
         // loudness filter
         setLoudnessStep(loudness);
 
-        // low pass filter
-        zeroCrossigBuffer.add(0, (short)loudness); // if there is already data on this index, the following data will be shifted
-        if (zeroCrossigBuffer.size() >= ZERO_CROSSING_BUFFER_SIZE) {
-            // remove last index to limit capacity
-            zeroCrossigBuffer.remove(ZERO_CROSSING_BUFFER_SIZE-1);
-        }
-
         // calculate frequency
         //if (loudness > LOUDNESS_THRESHOLD_AMP) {
             //calc_frequency = getFrequencyByZeroCrossings(RAW_SAMPLE_FREQUENCY, audioData, bytesRead);
             //calc_frequency = getFrequencyByZeroCrossings(SIGNAL_UPDATE_FREQENCY, zeroCrossigBuffer);
             //calc_frequencies = fourierLowPassFilter(toDoubleArray(audioData, bytesRead), 500.0, (double) RAW_SAMPLE_FREQUENCY);
-            calc_frequencies = calculateFrequencies(toDoubleArray(audioData, bytesRead));
+        calc_frequencies = calculateFrequencies(toDoubleArray(audioData, bytesRead));
+        mostPropableFrequencyStats.addValue(calculateMostPropableFrequency());
+        mostPropableFrequency = mostPropableFrequencyStats.getMean();
             //Log.d("zeroCrossings", "calc_frequency:" + calc_frequency + " loudness:" +loudness);
         //}
 
@@ -212,7 +206,7 @@ public class SoundMeter {
         return processFrequencies(results, RAW_SAMPLE_FREQUENCY, audioBuffer.length, 4);
     }
 
-    public static class FftFrequncy {
+    public class FftFrequncy {
         public float frequency;
         public float amplitude;
         @Override
@@ -221,7 +215,7 @@ public class SoundMeter {
         }
     }
 
-    private static List<FftFrequncy> processFrequencies(double results[], float sampleRate, int numSamples, int sigma) {
+    private List<FftFrequncy> processFrequencies(double results[], float sampleRate, int numSamples, int sigma) {
         double average = 0;
         for (int i = 0; i < results.length; i++) {
             average += results[i];
@@ -259,30 +253,64 @@ public class SoundMeter {
         return (found);
     }
 
-    public float getMostPropableFrequency(List<FftFrequncy> frequencies) {
-        float result = 0f;
+    private double calculateMostPropableFrequency() {
+        List<FftFrequncy> frequencies = getCalc_frequencies();
+        double result = 0;
+        double truncationOnEachSide = 0.1;
 
-        if (frequencies != null) {
-            float max_amplitude = 0;
-            float average_frequency = 0;
-            float sums_frequency = 0;
+        if (frequencies != null && frequencies.size() >0) {
+            int firstValidPos = (int) (((double)frequencies.size()) * truncationOnEachSide);
+            int lastValidPos = (int) Math.ceil((double)frequencies.size() * (1.0-truncationOnEachSide));
 
-            for (FftFrequncy candidate :frequencies) {
+            //int median_pos = frequencies.size() /2;
+            //FftFrequncy median = frequencies.get(median_pos);
+            double max_amplitude = 0;
+            double average_frequency_truncated = 0;
+            double average_frequency_without_spikes = 0;
+            int nr_of_frequency_without_spikes = 0;
+            double sums_frequency = 0;
+
+            // calculate maximal occuring amplitude
+            // and calculate truncated average (minimal and maximal 10 % truncated)
+            for (int i = firstValidPos; i < lastValidPos; i++) {
+                FftFrequncy candidate = frequencies.get(i);
+                average_frequency_truncated += candidate.frequency;
                 if (max_amplitude<candidate.amplitude) {
                     max_amplitude = candidate.amplitude;
-                    average_frequency += candidate.frequency
                 }
             }
-            average_frequency /= frequencies.size();
+            average_frequency_truncated /= frequencies.size();
 
-            for (FftFrequncy candidate :frequencies) {
-                sums_frequency += (candidate.frequency-average_frequency)*(candidate.frequency-average_frequency);
+            // calculate stdev
+            for (int i = firstValidPos; i < lastValidPos; i++) {
+                FftFrequncy candidate = frequencies.get(i);
+                sums_frequency += (candidate.frequency-average_frequency_truncated)*(candidate.frequency-average_frequency_truncated);
+            }
+            double stdev_frequencies = Math.sqrt(sums_frequency/(frequencies.size()-1));
+            if (stdev_frequencies < 10.0 || stdev_frequencies == Double.NaN) {
+                // fair enough - done
+                return average_frequency_truncated;
             }
 
-            float stdev = Math.sqrt(sums/(frequencies.size()-1));
+            // calculate truncated mean without spikes, where a spike is one of the following
+            // * out of stdev range of average_frequency_truncated
+            // * amplitude less than max_amplitude/2
+            for (int i = firstValidPos; i < lastValidPos; i++) {
+                FftFrequncy candidate = frequencies.get(i);
+                if ((max_amplitude/2.0)<candidate.amplitude
+                        && average_frequency_truncated + stdev_frequencies > candidate.frequency
+                        && average_frequency_truncated - stdev_frequencies < candidate.frequency) {
+                    nr_of_frequency_without_spikes += 1;
+                    average_frequency_without_spikes += candidate.frequency;
+                }
 
-            // TODO
-
+            }
+            if (nr_of_frequency_without_spikes > 0) {
+                average_frequency_without_spikes /= nr_of_frequency_without_spikes;
+                return average_frequency_without_spikes;
+            }else {
+                return average_frequency_truncated;
+            }
         }
 
         return result;
