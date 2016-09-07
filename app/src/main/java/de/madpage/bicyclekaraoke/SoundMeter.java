@@ -6,6 +6,7 @@ import android.media.AudioRecord;
 import android.media.MediaRecorder;
 import android.os.Handler;
 import android.preference.PreferenceManager;
+import android.support.v4.util.CircularArray;
 import android.util.Log;
 
 import org.apache.commons.math3.stat.StatUtils;
@@ -15,7 +16,10 @@ import org.apache.commons.math3.transform.FastFourierTransformer;
 import org.apache.commons.math3.transform.TransformType;
 import org.apache.commons.math3.complex.Complex;
 
+import java.nio.DoubleBuffer;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -23,11 +27,12 @@ import java.util.List;
  */
 public class SoundMeter {
 
-    public final int RAW_SAMPLE_FREQUENCY = 22050;
-    public final int SIGNAL_UPDATE_FREQENCY = 2000;
+    public final int RAW_SAMPLE_FREQUENCY = 44100;
+    public final int SIGNAL_UPDATE_FREQENCY = 200;
     public final int LOUDNESS_WINDOW_SIZE = 10;
+    public final int PEAK_WINDOW = 1;
     public final int LOUDNESS_THRESHOLD_AMP = 300;
-    public final int LOUDNESS_THRESHOLD_NR = 3;
+    //public final int LOUDNESS_THRESHOLD_NR = 3;
     public final int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
     public final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
     public final int BUFFER_MULTIPLYER = 4;
@@ -39,9 +44,24 @@ public class SoundMeter {
     private int rotating_loudness_pointer = 0;
     private double loudness;
     private boolean isStarted = false;
-    private List<FftFrequncy> calc_frequencies = new ArrayList<FftFrequncy>();
-    private double mostPropableFrequency = 0.0;
-    private DescriptiveStatistics mostPropableFrequencyStats;
+    private double currentPeaksPerSecond = 0.0;
+    private double peaksPerSecondRollingAverage = 0.0;
+    private ArrayDeque<Long> peaks = new ArrayDeque<Long>();
+    private ArrayDeque<Double> peaksRollingAverage = new ArrayDeque<Double>();
+
+    private ArrayDeque<Double> loudnessHistory = null;
+
+    private int getOneSecondBufferSize() {
+        return RAW_SAMPLE_FREQUENCY * 16; // mono, 16bit
+    }
+
+    private int getBufferSizePerUpdate() {
+        return RAW_SAMPLE_FREQUENCY * 16 / SIGNAL_UPDATE_FREQENCY; // mono, 16bit
+    }
+
+    public double getPeaksPerSecondRollingAverage() {
+        return peaksPerSecondRollingAverage;
+    }
 
     public SoundMeter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
@@ -54,8 +74,9 @@ public class SoundMeter {
     Handler signalUpdateHandler = new Handler();
 
     public void start() {
-        mostPropableFrequencyStats = new DescriptiveStatistics();
-        mostPropableFrequencyStats.setWindowSize(20);
+        loudnessHistory = new ArrayDeque<Double>();
+
+
 
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(mainActivity);
         String samplingFrequency = sharedPrefs.getString("pref_key_raw_update_freq", "44100");
@@ -64,8 +85,6 @@ public class SoundMeter {
         try {
             // Create a new AudioRecord object to record the audio.
             bufferSize = BUFFER_MULTIPLYER * AudioRecord.getMinBufferSize(RAW_SAMPLE_FREQUENCY, channelConfiguration, audioEncoding);
-            // increase bufferSize to next available power of two
-            bufferSize = nextPowerOfTwo(bufferSize);
 
             audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, RAW_SAMPLE_FREQUENCY, channelConfiguration, audioEncoding, bufferSize);
             audioRecord.startRecording();
@@ -80,26 +99,9 @@ public class SoundMeter {
         }
     }
 
-    /**
-     * https://en.wikipedia.org/wiki/Power_of_two#Fast_algorithm_to_check_if_a_positive_number_is_a_power_of_two
-     */
-    private int nextPowerOfTwo(final int a)
-    {
-        int b = 1;
-        while (b < a)
-        {
-            b = b << 1;
-        }
-        return b;
-    }
-
     public void stop() {
         audioRecord.stop();
     }
-
-    public double getMostPropableFrequency() { return mostPropableFrequency; }
-
-    public List<FftFrequncy> getCalc_frequencies() { return calc_frequencies; }
 
     public double getLoudness() {
         return loudness;
@@ -121,49 +123,88 @@ public class SoundMeter {
 
     protected void refreshSignal() {
         // reading as much signal from audioRecord as available (since last read)
-        short[] audioData = new short[bufferSize*2];
-        int bytesRead = audioRecord.read(audioData, 0, bufferSize);
+        short[] audioData = new short[getBufferSizePerUpdate()*2];
+        int bytesRead = audioRecord.read(audioData, 0, getBufferSizePerUpdate());
         loudness = rootMeanSquared(audioData, bytesRead);
 
         // loudness filter
-        setLoudnessStep(loudness);
+        //setLoudnessStep(loudness);
 
-        // calculate frequency
-        //if (loudness > LOUDNESS_THRESHOLD_AMP) {
-            //calc_frequency = getFrequencyByZeroCrossings(RAW_SAMPLE_FREQUENCY, audioData, bytesRead);
-            //calc_frequency = getFrequencyByZeroCrossings(SIGNAL_UPDATE_FREQENCY, zeroCrossigBuffer);
-            //calc_frequencies = fourierLowPassFilter(toDoubleArray(audioData, bytesRead), 500.0, (double) RAW_SAMPLE_FREQUENCY);
-        calc_frequencies = calculateFrequencies(toDoubleArray(audioData, bytesRead));
-        mostPropableFrequencyStats.addValue(calculateMostPropableFrequency());
-        mostPropableFrequency = mostPropableFrequencyStats.getMean();
-            //Log.d("zeroCrossings", "calc_frequency:" + calc_frequency + " loudness:" +loudness);
-        //}
+        loudnessHistory.addFirst(loudness);
+        while (loudnessHistory.size() > SIGNAL_UPDATE_FREQENCY) {
+            // store exactly one second
+            loudnessHistory.removeLast();
+        }
+
+        double[] arrayLoudness = getDoubleArray(loudnessHistory);
+        double average = StatUtils.mean(arrayLoudness);
+        double variance = StatUtils.variance(arrayLoudness, average);
+        double stdev = Math.sqrt(variance);
+        long currentTime = new Date().getTime();
+        boolean peakWasRemovedOrAdded = false;
+
+        if (loudness> average + stdev && loudness > LOUDNESS_THRESHOLD_AMP) {
+            // add peak to list
+            peaks.addFirst(currentTime);
+            peakWasRemovedOrAdded = true;
+        }
+        while (peaks.size() > 0 && peaks.getLast().longValue() + 1000 * PEAK_WINDOW < currentTime) {
+            peaks.removeLast();
+            peakWasRemovedOrAdded = true;
+        }
+
+        if (peaks.size() == 0) {
+            peaksPerSecondRollingAverage = 0.0;
+        }else if(peakWasRemovedOrAdded) {
+            // determine current peaks per second
+            if (peaks.size() > 2) {
+                double diff = peaks.getFirst().longValue() - peaks.getLast().longValue();
+                double averageDistance = diff / (double) peaks.size();
+                currentPeaksPerSecond = 1000.0 / averageDistance;
+            }
+
+            // update rolling average
+            peaksRollingAverage.addFirst(currentPeaksPerSecond);
+            while (peaksRollingAverage.size() > 10) {
+                peaksRollingAverage.removeLast();
+            }
+            double sum = 0.0;
+            Double[] arrayPeaks = peaksRollingAverage.toArray(new Double[0]);
+            for (int i = 0; i < arrayPeaks.length; i++) {
+                sum += arrayPeaks[i];
+            }
+            peaksPerSecondRollingAverage = sum / arrayPeaks.length;
+        }
+
 
     }
 
-    private double[] toDoubleArray(short[] audioData, int maxLen) {
-        int size = (maxLen < audioData.length ? maxLen : audioData.length);
+    private double[] getDoubleArray(ArrayDeque<Double> deque) {
+        int size = deque.size();
         double[] result = new double[size];
+        Double[] input = deque.toArray(new Double[0]);
         for (int i = 0; i < size; i++ ) {
-            result[i] = audioData[i];
+            result[i] = (double) input[i];
         }
         return result;
     }
 
-    private void setLoudnessStep(double loudness) {
-        loudness_window[rotating_loudness_pointer]=loudness;
-        rotating_loudness_pointer = (rotating_loudness_pointer+1)% LOUDNESS_WINDOW_SIZE;
-    }
+
+    //private void setLoudnessStep(double loudness) {
+    //    loudness_window[rotating_loudness_pointer]=loudness;
+    //    rotating_loudness_pointer = (rotating_loudness_pointer+1)% LOUDNESS_WINDOW_SIZE;
+    //}
 
     public boolean isLoudEnough() {
-        int noOfMinorLoudness = 0;
-        for ( int i = 0; i < loudness_window.length; i++) {
-            if (loudness_window[i]<LOUDNESS_THRESHOLD_AMP) {
-                noOfMinorLoudness++;
-            }
-        }
+        //int noOfMinorLoudness = 0;
+        //for ( int i = 0; i < loudness_window.length; i++) {
+        //    if (loudness_window[i]<LOUDNESS_THRESHOLD_AMP) {
+        //        noOfMinorLoudness++;
+        //    }
+        //}
 
-        return noOfMinorLoudness < LOUDNESS_THRESHOLD_NR;
+        //return noOfMinorLoudness < LOUDNESS_THRESHOLD_NR;
+        return true;
     }
 
     private static double rootMeanSquared(short[] nums, Integer useCustomLength)
@@ -183,136 +224,4 @@ public class SoundMeter {
         return Math.sqrt(ms);
     }
 
-    /**
-     * http://archive.oreilly.com/oreillyschool/courses/data-structures-algorithms/soundFiles.html
-     */
-    private List<FftFrequncy> calculateFrequencies(double[] audioBuffer) {
-        double[] outR = new double[audioBuffer.length];
-        double[] outI = new double[audioBuffer.length];
-
-        FastFourierTransformer fft = new FastFourierTransformer(DftNormalization.STANDARD);
-        Complex resultC[] = fft.transform(audioBuffer, TransformType.FORWARD);
-
-        double results[] = new double[outR.length];
-        for (int i = 0; i < outR.length; i++) {
-            results[i] = Math.sqrt(outR[i]*outR[i] + outI[i]*outI[i]);
-        }
-        for (int i = 0; i < resultC.length; i++) {
-            double real = resultC[i].getReal();
-            double imaginary = resultC[i].getImaginary();
-            results[i] = Math.sqrt(real*real + imaginary*imaginary);
-        }
-
-        return processFrequencies(results, RAW_SAMPLE_FREQUENCY, audioBuffer.length, 4);
-    }
-
-    public class FftFrequncy {
-        public float frequency;
-        public float amplitude;
-        @Override
-        public String toString() {
-            return new StringBuffer().append("f=").append(frequency).append(" amp=").append(amplitude).toString();
-        }
-    }
-
-    private List<FftFrequncy> processFrequencies(double results[], float sampleRate, int numSamples, int sigma) {
-        double average = 0;
-        for (int i = 0; i < results.length; i++) {
-            average += results[i];
-        }
-        average = average/results.length;
-
-        double sums = 0;
-        for (int i = 0; i < results.length; i++) {
-            sums += (results[i]-average)*(results[i]-average);
-        }
-
-        double stdev = Math.sqrt(sums/(results.length-1));
-
-        ArrayList<FftFrequncy> found = new ArrayList<FftFrequncy>();
-        double max = Integer.MIN_VALUE;
-        int maxF = -1;
-        for (int f = 0; f < results.length/2; f++) {
-            if (results[f] > average+sigma*stdev) {
-                if (results[f] > max) {
-                    max = results[f];
-                    maxF = f;
-                }
-            } else {
-                if (maxF != -1) {
-                    FftFrequncy foundFrequency = new FftFrequncy();
-                    foundFrequency.frequency = maxF*sampleRate/numSamples;
-                    foundFrequency.amplitude = (float)results[f];
-                    found.add(foundFrequency);
-                    max = Integer.MIN_VALUE;
-                    maxF = -1;
-                }
-            }
-        }
-
-        return (found);
-    }
-
-    private double calculateMostPropableFrequency() {
-        List<FftFrequncy> frequencies = getCalc_frequencies();
-        double result = 0;
-        double truncationOnEachSide = 0.1;
-
-        if (frequencies != null && frequencies.size() >0) {
-            int firstValidPos = (int) (((double)frequencies.size()) * truncationOnEachSide);
-            int lastValidPos = (int) Math.ceil((double)frequencies.size() * (1.0-truncationOnEachSide));
-
-            //int median_pos = frequencies.size() /2;
-            //FftFrequncy median = frequencies.get(median_pos);
-            double max_amplitude = 0;
-            double average_frequency_truncated = 0;
-            double average_frequency_without_spikes = 0;
-            int nr_of_frequency_without_spikes = 0;
-            double sums_frequency = 0;
-
-            // calculate maximal occuring amplitude
-            // and calculate truncated average (minimal and maximal 10 % truncated)
-            for (int i = firstValidPos; i < lastValidPos; i++) {
-                FftFrequncy candidate = frequencies.get(i);
-                average_frequency_truncated += candidate.frequency;
-                if (max_amplitude<candidate.amplitude) {
-                    max_amplitude = candidate.amplitude;
-                }
-            }
-            average_frequency_truncated /= frequencies.size();
-
-            // calculate stdev
-            for (int i = firstValidPos; i < lastValidPos; i++) {
-                FftFrequncy candidate = frequencies.get(i);
-                sums_frequency += (candidate.frequency-average_frequency_truncated)*(candidate.frequency-average_frequency_truncated);
-            }
-            double stdev_frequencies = Math.sqrt(sums_frequency/(frequencies.size()-1));
-            if (stdev_frequencies < 10.0 || stdev_frequencies == Double.NaN) {
-                // fair enough - done
-                return average_frequency_truncated;
-            }
-
-            // calculate truncated mean without spikes, where a spike is one of the following
-            // * out of stdev range of average_frequency_truncated
-            // * amplitude less than max_amplitude/2
-            for (int i = firstValidPos; i < lastValidPos; i++) {
-                FftFrequncy candidate = frequencies.get(i);
-                if ((max_amplitude/2.0)<candidate.amplitude
-                        && average_frequency_truncated + stdev_frequencies > candidate.frequency
-                        && average_frequency_truncated - stdev_frequencies < candidate.frequency) {
-                    nr_of_frequency_without_spikes += 1;
-                    average_frequency_without_spikes += candidate.frequency;
-                }
-
-            }
-            if (nr_of_frequency_without_spikes > 0) {
-                average_frequency_without_spikes /= nr_of_frequency_without_spikes;
-                return average_frequency_without_spikes;
-            }else {
-                return average_frequency_truncated;
-            }
-        }
-
-        return result;
-    }
 }

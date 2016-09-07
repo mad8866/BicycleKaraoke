@@ -27,7 +27,7 @@ public class MainActivity extends HidableActivity {
     private FrameLayout mVideoFrame;
     private ProgressBar mProgressBar;
     private VideoFinder videoFinder;
-    public final int UI_UPDATE_FREQENCY = 10;
+    public final int UI_UPDATE_FREQENCY = 20;
     private TextView tv_status;
     private TextView mVideoOverlay;
     private SoundMeter soundmeter = new SoundMeter(this);
@@ -163,18 +163,16 @@ public class MainActivity extends HidableActivity {
 
         //    if (soundmeter.isLoudEnough()) {
 
-        List<SoundMeter.FftFrequncy> frequencies = soundmeter.getCalc_frequencies();
+        Double peaksPerSecond = soundmeter.getPeaksPerSecondRollingAverage();
+
         StringBuilder sb = new StringBuilder();
         sb.append("Loudness:\n")
                 .append(soundmeter.getLoudness())
-                .append("\n\nMean Frequency:\n")
-                .append(soundmeter.getMostPropableFrequency())
-                .append("\n\nFFT RESULTS:\n");
-        for (SoundMeter.FftFrequncy frequence : frequencies) {
-            sb.append(frequence).append('\n');
-        }
+                .append("\n\nPeaks:\n")
+                .append(peaksPerSecond);
         currentStatus = sb.toString();
 
+        setVideoVisibility(peaksPerSecond / 10);
 
         //    }
         //}
