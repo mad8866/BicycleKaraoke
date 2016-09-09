@@ -16,13 +16,63 @@
             android:title="Tachometer signalupdate frequency" /-->
 
         <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_peak_window_size"
+            android:title="Peak window size"
+            android:summary="The tachometer works by counting clicks/second. Clicks older than this will be deleted."
+            android:enabled="true"
+            android:defaultValue="1500"
+
+            sample:msbp_minValue="100"
+            sample:msbp_maxValue="3000"
+            sample:msbp_interval="100"
+            sample:msbp_measurementUnit="Milliseconds"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_loudnes_threshold"
+            android:title="Loudness threshold"
+            android:summary="How loud must a click be to get counted"
+            android:enabled="true"
+            android:defaultValue="300"
+
+            sample:msbp_minValue="50"
+            sample:msbp_maxValue="2000"
+            sample:msbp_interval="5"
+            sample:msbp_measurementUnit="Amplitude"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
             android:key="pref_key_tacho_refresh_frequency"
             android:title="Tachometer refresh frequency"
             android:summary="UI Updates per second"
             android:enabled="true"
-            android:defaultValue="10"
+            android:defaultValue="20"
 
             sample:msbp_minValue="1"
+            sample:msbp_maxValue="50"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="Hz"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_signal_calc_frequency"
+            android:title="Calculate speed frequency"
+            android:enabled="true"
+            android:defaultValue="400"
+
+            sample:msbp_minValue="50"
+            sample:msbp_maxValue="5000"
+            sample:msbp_interval="100"
+            sample:msbp_measurementUnit="Hz"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_desired_speed"
+            android:title="Desired speed"
+            android:enabled="true"
+            android:defaultValue="10"
+
+            sample:msbp_minValue="5"
             sample:msbp_maxValue="50"
             sample:msbp_interval="1"
             sample:msbp_measurementUnit="Hz"
@@ -37,22 +87,17 @@
             android:entries="@array/sample_freq_titles"
             />
 
-        <com.pavelsikun.seekbarpreference.SeekBarPreference
-            android:key="pref_key_signal_calc_frequency"
-            android:title="Calculate speed frequency"
-            android:enabled="true"
-            android:defaultValue="1000"
-
-            sample:msbp_minValue="50"
-            sample:msbp_maxValue="5000"
-            sample:msbp_interval="100"
-            sample:msbp_measurementUnit="Hz"
-            sample:msbp_dialogEnabled="false"/>
-
     </PreferenceCategory>
     <PreferenceCategory
         android:key="pref_key_general_settings"
         android:title="General">
+
+        <CheckBoxPreference
+            android:key="pref_key_fullscreen_mode"
+            android:title="Enable Fullscreen"
+            android:selectable="true"
+            android:defaultValue="true"
+            />
 
         <fortyonepost.com.resetpreferencesdialog.ResetDefDiagPref
             android:dialogMessage="Revert all values to their defaults?"

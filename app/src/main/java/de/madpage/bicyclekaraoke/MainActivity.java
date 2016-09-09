@@ -1,11 +1,12 @@
 package de.madpage.bicyclekaraoke;
 
 import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
+import android.preference.PreferenceManager;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -27,7 +28,8 @@ public class MainActivity extends HidableActivity {
     private FrameLayout mVideoFrame;
     private ProgressBar mProgressBar;
     private VideoFinder videoFinder;
-    public final int UI_UPDATE_FREQENCY = 20;
+    private int UI_UPDATE_FREQENCY = 20;
+    private int DESIRED_SPEED = 10;
     private TextView tv_status;
     private TextView mVideoOverlay;
     private SoundMeter soundmeter = new SoundMeter(this);
@@ -124,6 +126,12 @@ public class MainActivity extends HidableActivity {
      * Unhide video, start video and soundmeter
      */
     private void startPlayback() {
+        // load user preferences
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        UI_UPDATE_FREQENCY = sharedPrefs.getInt("pref_key_tacho_refresh_frequency", 20);
+        DESIRED_SPEED = sharedPrefs.getInt("pref_key_desired_speed", 10);
+
+
         try {
             String videoFile = videoFinder.randomVideo(true);
             mVideoView.setVideoPath(videoFile);
@@ -172,7 +180,7 @@ public class MainActivity extends HidableActivity {
                 .append(peaksPerSecond);
         currentStatus = sb.toString();
 
-        setVideoVisibility(peaksPerSecond / 10);
+        setVideoVisibility(peaksPerSecond / DESIRED_SPEED);
 
         //    }
         //}

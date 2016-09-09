@@ -6,8 +6,10 @@ package de.madpage.bicyclekaraoke;
 
 import android.annotation.SuppressLint;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Handler;
+import android.preference.PreferenceManager;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
@@ -153,7 +155,11 @@ public class HidableActivity extends AppCompatActivity {
     }
 
     private void hide() {
-        if (BuildConfig.DEBUG || !BuildConfig.DEBUG) {
+        // load user preferences
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        boolean fullscreenEnabled = sharedPrefs.getBoolean("pref_key_fullscreen_mode", true);
+
+        if (!fullscreenEnabled) {
             //disable hide
             return;
         }

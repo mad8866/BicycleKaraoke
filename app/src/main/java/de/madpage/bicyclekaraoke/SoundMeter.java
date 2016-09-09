@@ -27,20 +27,19 @@ import java.util.List;
  */
 public class SoundMeter {
 
-    public final int RAW_SAMPLE_FREQUENCY = 44100;
-    public final int SIGNAL_UPDATE_FREQENCY = 200;
-    public final int LOUDNESS_WINDOW_SIZE = 10;
-    public final int PEAK_WINDOW = 1;
-    public final int LOUDNESS_THRESHOLD_AMP = 300;
-    //public final int LOUDNESS_THRESHOLD_NR = 3;
-    public final int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
-    public final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
-    public final int BUFFER_MULTIPLYER = 4;
+    private int RAW_SAMPLE_FREQUENCY = 44100;
+    private int SIGNAL_UPDATE_FREQENCY = 1000;
+    //private final int LOUDNESS_WINDOW_SIZE = 10;
+    private int PEAK_WINDOW = 1000;
+    private int LOUDNESS_THRESHOLD_AMP = 300;
+    private final int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
+    private final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
+    private final int BUFFER_MULTIPLYER = 4;
     private final MainActivity mainActivity;
 
     private int bufferSize;
     AudioRecord audioRecord;
-    private double [] loudness_window = new double[LOUDNESS_WINDOW_SIZE];
+    //private double [] loudness_window = new double[LOUDNESS_WINDOW_SIZE];
     private int rotating_loudness_pointer = 0;
     private double loudness;
     private boolean isStarted = false;
@@ -77,10 +76,17 @@ public class SoundMeter {
         loudnessHistory = new ArrayDeque<Double>();
 
 
-
+        // load user preferences
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(mainActivity);
         String samplingFrequency = sharedPrefs.getString("pref_key_raw_update_freq", "44100");
-        // TODO
+        SIGNAL_UPDATE_FREQENCY = sharedPrefs.getInt("pref_key_signal_calc_frequency", 1000);
+        PEAK_WINDOW = sharedPrefs.getInt("pref_key_peak_window_size", 1000);
+        LOUDNESS_THRESHOLD_AMP = sharedPrefs.getInt("pref_key_loudnes_threshold", 300);
+        try {
+            RAW_SAMPLE_FREQUENCY = Integer.parseInt(samplingFrequency);
+        }catch (NumberFormatException ex) {
+
+        }
         
         try {
             // Create a new AudioRecord object to record the audio.
@@ -127,9 +133,6 @@ public class SoundMeter {
         int bytesRead = audioRecord.read(audioData, 0, getBufferSizePerUpdate());
         loudness = rootMeanSquared(audioData, bytesRead);
 
-        // loudness filter
-        //setLoudnessStep(loudness);
-
         loudnessHistory.addFirst(loudness);
         while (loudnessHistory.size() > SIGNAL_UPDATE_FREQENCY) {
             // store exactly one second
@@ -148,7 +151,7 @@ public class SoundMeter {
             peaks.addFirst(currentTime);
             peakWasRemovedOrAdded = true;
         }
-        while (peaks.size() > 0 && peaks.getLast().longValue() + 1000 * PEAK_WINDOW < currentTime) {
+        while (peaks.size() > 0 && peaks.getLast().longValue() + PEAK_WINDOW < currentTime) {
             peaks.removeLast();
             peakWasRemovedOrAdded = true;
         }
