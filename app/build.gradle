@@ -17,6 +17,9 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
+    lintOptions {
+      disable 'InvalidPackage' //to avoid "InvalidPackage: Package not included in Android" on apache.commons
+    }
 }
 //repositories {
 //    maven { url 'https://dl.bintray.com/sule/maven/' }
