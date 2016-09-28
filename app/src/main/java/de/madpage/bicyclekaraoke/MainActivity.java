@@ -34,6 +34,7 @@ public class MainActivity extends HidableActivity {
     private TextView mVideoOverlay;
     private SoundMeter soundmeter = new SoundMeter(this);
     private Handler uiUpdateHandler = new Handler();
+    private int[] VARIABLE_DESIRED_SPEED = null;
 
     AlertDialog.Builder alertDialogBuilder = null;
 
@@ -130,7 +131,22 @@ public class MainActivity extends HidableActivity {
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         UI_UPDATE_FREQENCY = sharedPrefs.getInt("pref_key_tacho_refresh_frequency", 20);
         DESIRED_SPEED = sharedPrefs.getInt("pref_key_desired_speed", 10);
+        String variableDesiredSpeed = sharedPrefs.getString("pref_key_variable_desired_speed", "");
 
+        // get speed array from splitted string
+        VARIABLE_DESIRED_SPEED = null;
+        if (variableDesiredSpeed != null && !variableDesiredSpeed.isEmpty()) {
+            String[] speedStrings = variableDesiredSpeed.split(",");
+
+            try {
+                VARIABLE_DESIRED_SPEED = new int[speedStrings.length];
+                for (int i = 0; i < speedStrings.length; i++) {
+                    VARIABLE_DESIRED_SPEED[i] = Integer.parseInt(speedStrings[i]);
+                }
+            } catch (Exception ex) {
+                VARIABLE_DESIRED_SPEED = null;
+            }
+        }
 
         try {
             String videoFile = videoFinder.randomVideo(true);
@@ -155,16 +171,31 @@ public class MainActivity extends HidableActivity {
         }
     };
 
+    private void setVariableDesiredSpeed(int progress) {
+        if (VARIABLE_DESIRED_SPEED != null) {
+            if (progress == 0 || progress == 100) {
+                DESIRED_SPEED = VARIABLE_DESIRED_SPEED[0];
+            } else {
+                int index = (VARIABLE_DESIRED_SPEED.length * progress)/100;
+                DESIRED_SPEED = VARIABLE_DESIRED_SPEED[index];
+            }
+        }
+    }
+
     protected void refreshUi() {
         int current = mVideoView.getCurrentPosition();
         int duration = mVideoView.getDuration();
 
         try {
-            mProgressBar.setProgress((int) (current * 100 / duration));
+            int progress = (int) (current * 100 / duration);
+            mProgressBar.setProgress(progress);
+            setVariableDesiredSpeed(progress);
         } catch (Exception e) {
         }
 
-        String currentStatus = "HEY!\nMake some noise :-P";
+        String currentStatus;
+
+        // = "HEY!\nMake some noise :-P";
 
         //if (soundmeter.getLoudness() > soundmeter.LOUDNESS_THRESHOLD_AMP) {
         //    Log.d("zeroCrossings", "calc_frequency:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" + soundmeter.getLoudness());
@@ -176,8 +207,11 @@ public class MainActivity extends HidableActivity {
         StringBuilder sb = new StringBuilder();
         sb.append("Loudness:\n")
                 .append(soundmeter.getLoudness())
-                .append("\n\nPeaks:\n")
-                .append(peaksPerSecond);
+                .append("\n\nDu fährst:\n")
+                .append(peaksPerSecond)
+                .append("\n\nZiel Geschwindigkeit:\n")
+                .append(DESIRED_SPEED)
+        ;
         currentStatus = sb.toString();
 
         setVideoVisibility(peaksPerSecond / DESIRED_SPEED);

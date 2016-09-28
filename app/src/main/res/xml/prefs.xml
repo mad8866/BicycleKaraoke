@@ -4,12 +4,7 @@
     <PreferenceCategory
         android:key="pref_key_tacho_settings"
         android:title="Tachometer">
-        <!--EditTextPreference
-            android:defaultValue="10"
-            android:key="pref_key_tacho_refresh_frequency"
-            android:summary=""
-            android:title="Tachometer refresh frequency" />
-        <Preference
+        <!--Preference
             android:defaultValue="1000"
             android:key="pref_key_tacho_signalupdate_frequency"
             android:summary=""
@@ -72,8 +67,26 @@
             android:enabled="true"
             android:defaultValue="10"
 
-            sample:msbp_minValue="5"
+            sample:msbp_minValue="1"
             sample:msbp_maxValue="50"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="Hz"
+            sample:msbp_dialogEnabled="false"/>
+
+        <EditTextPreference
+            android:defaultValue=""
+            android:key="pref_key_variable_desired_speed"
+            android:summary="Overrides desired speed, example: 5,6,7,8,7,6,5"
+            android:title="Variable desired speed" />
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_maximum_speed"
+            android:title="Maximum speed"
+            android:enabled="true"
+            android:defaultValue="30"
+
+            sample:msbp_minValue="5"
+            sample:msbp_maxValue="100"
             sample:msbp_interval="1"
             sample:msbp_measurementUnit="Hz"
             sample:msbp_dialogEnabled="false"/>

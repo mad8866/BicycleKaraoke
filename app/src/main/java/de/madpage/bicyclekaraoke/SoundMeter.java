@@ -27,11 +27,12 @@ import java.util.List;
  */
 public class SoundMeter {
 
-    private int RAW_SAMPLE_FREQUENCY = 44100;
-    private int SIGNAL_UPDATE_FREQENCY = 1000;
+    private int RAW_SAMPLE_FREQUENCY;
+    private int SIGNAL_UPDATE_FREQENCY;
     //private final int LOUDNESS_WINDOW_SIZE = 10;
-    private int PEAK_WINDOW = 1000;
-    private int LOUDNESS_THRESHOLD_AMP = 300;
+    private int PEAK_WINDOW;
+    private int LOUDNESS_THRESHOLD_AMP;
+    private int MAXIMUM_SPEED;
     private final int channelConfiguration = AudioFormat.CHANNEL_CONFIGURATION_MONO;
     private final int audioEncoding = AudioFormat.ENCODING_PCM_16BIT;
     private final int BUFFER_MULTIPLYER = 4;
@@ -82,6 +83,7 @@ public class SoundMeter {
         SIGNAL_UPDATE_FREQENCY = sharedPrefs.getInt("pref_key_signal_calc_frequency", 1000);
         PEAK_WINDOW = sharedPrefs.getInt("pref_key_peak_window_size", 1000);
         LOUDNESS_THRESHOLD_AMP = sharedPrefs.getInt("pref_key_loudnes_threshold", 300);
+        MAXIMUM_SPEED = sharedPrefs.getInt("pref_key_maximum_speed", 30);
         try {
             RAW_SAMPLE_FREQUENCY = Integer.parseInt(samplingFrequency);
         }catch (NumberFormatException ex) {
@@ -147,9 +149,14 @@ public class SoundMeter {
         boolean peakWasRemovedOrAdded = false;
 
         if (loudness> average + stdev && loudness > LOUDNESS_THRESHOLD_AMP) {
-            // add peak to list
-            peaks.addFirst(currentTime);
-            peakWasRemovedOrAdded = true;
+            int minimumPeakDifference = 1000 / MAXIMUM_SPEED;
+            if (peaks.size() == 0 // put on empty list
+                    || currentTime - peaks.getFirst().longValue() > minimumPeakDifference
+                    ) {
+                // add peak to list
+                peaks.addFirst(currentTime);
+                peakWasRemovedOrAdded = true;
+            }
         }
         while (peaks.size() > 0 && peaks.getLast().longValue() + PEAK_WINDOW < currentTime) {
             peaks.removeLast();
