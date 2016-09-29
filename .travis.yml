@@ -30,6 +30,18 @@ env:
   global:
    # install timeout in minutes (2 minutes by default)
     - ADB_INSTALL_TIMEOUT=8
+# deploy to github releases as described here https://github.com/pockethub/PocketHub/issues/770
+deploy:
+  provider: releases
+  api_key:
+    secure: hGKL6LShXq9HtZ+k6E0kYEVi7j6wp7ptBRqK9aoTlpxc2fkJCtWLP/hs/xZidC+03QvC2L+sytirdYfxLjr0ZequiHET/sS7Sgqwl1wL6sThYHrAb64B3NgTfWMrMHFAmJ2c8H6oZNCkJUtkUjgxI15m5Y6jt8oFke6Zrfkt+Dkm1sJJ8AsyR4v4k8otgj8bs9sXhOFsNc+L69kDhFN9XsMXji1BtQbFrLp+40d59k7Jr9SV+hVRsLZio4z9zKf4Q0fx5cmBrGXPwag34cVScJR84UG5KglkWVN89V8ZuS+aSVHc+UMJHYJisfZsfrE5iQn2YFiiznKKB9/PYOGHdv9YKoGuw81gTejbi6og+9L9pY2zrR5ElzU39LyEPUhurTadBsFi4jhILhYR9zAv6lwTwi5aPkwgCcvuLjpTk6EYmtRmd+w+FFcGrgpWVZ+OXZQxsYPw+xTvgwR1PvHSz2/kAoH8QaEcwWASC9UVfD9uSbsvNp1wq2uuDUlj4Bxm8sRnrfdE7gBSCT9IPS9eXmaQJDPDtC+UlQ3E3lRj7KA+ot2cdxI2pMynz52w2EiIArwsRSbS6dXJeV+dZ+aTpGE/YOvy675y6yz8CuDEU0LYOrKqpGDh1HehXDUIAC1fi7qjgKzA/RGfpOpV/aTO9hBRfq5k4Qh0DnikUr0Enj0=
+  file: app/build/outputs/apk/app-release-unsigned.apk
+  # do not delete the files we're trying to upload
+  skip_cleanup: true
+  on: # we are on this repo
+    repo: mdicke2s/BicycleKaraoke
+    # and we are building a tag
+    tags: true
 
 # Emulator Management: Create, Start and Wait
 before_script:
