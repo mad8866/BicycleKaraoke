@@ -15,9 +15,13 @@ This repository holds an Android application which includes:
 - User preferences
 
 ## Requirements
-- Android device with microphone
+- Android device (Ice Cream Sandwich or newer)
+- Tablet prefered
 - Adapter that provides headphone and microphone jack separately (Android phone jack comes with CTIA pinout order (LRGM))
 - Sensor from a usual tacho
+- Bicylce & rear-wheel mount
+- Something to hold your device (e.g. music stand)
+- Headphones
 
 ## Setup instructions
 - Install the apk to your device
