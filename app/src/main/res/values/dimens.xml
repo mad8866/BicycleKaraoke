@@ -4,4 +4,12 @@
     <dimen name="activity_vertical_margin">16dp</dimen>
     <dimen name="fab_margin">16dp</dimen>
     <dimen name="appbar_padding_top">8dp</dimen>
+    <dimen name="scale_line_small">10dp</dimen>
+    <dimen name="scale_line_medium">25dp</dimen>
+    <dimen name="scale_line_large">50dp</dimen>
+    <dimen name="yellow_line_stroke_width">6dp</dimen>
+    <dimen name="text_start_point">80dp</dimen>
+    <dimen name="text_small">12dp</dimen>
+    <dimen name="text_large">15dp</dimen>
+    <dimen name="txt_size">16dp</dimen>
 </resources>

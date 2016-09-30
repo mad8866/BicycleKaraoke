@@ -48,6 +48,7 @@ public class SoundMeter {
     private double peaksPerSecondRollingAverage = 0.0;
     private ArrayDeque<Long> peaks = new ArrayDeque<Long>();
     private ArrayDeque<Double> peaksRollingAverage = new ArrayDeque<Double>();
+    private boolean isStillCurrentPeak = false;
 
     private ArrayDeque<Double> loudnessHistory = null;
 
@@ -63,6 +64,21 @@ public class SoundMeter {
         return peaksPerSecondRollingAverage;
     }
 
+    public int getNrOfPeaks() {
+        return peaks.size();
+    }
+
+    public String peaksToString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Size=").append(getNrOfPeaks());
+        long currentTime = new Date().getTime();
+        for (Long element : peaks) {
+            sb.append("\n").append(currentTime - element)
+                    .append(" ms old");
+        }
+        return sb.toString();
+    }
+
     public SoundMeter(MainActivity mainActivity) {
         this.mainActivity = mainActivity;
     }
@@ -75,7 +91,7 @@ public class SoundMeter {
 
     public void start() {
         loudnessHistory = new ArrayDeque<Double>();
-
+        isStillCurrentPeak = false;
 
         // load user preferences
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(mainActivity);
@@ -150,13 +166,17 @@ public class SoundMeter {
 
         if (loudness> average + stdev && loudness > LOUDNESS_THRESHOLD_AMP) {
             int minimumPeakDifference = 1000 / MAXIMUM_SPEED;
-            if (peaks.size() == 0 // put on empty list
+            if (!isStillCurrentPeak &&
+                    (peaks.size() == 0 // put on empty list
                     || currentTime - peaks.getFirst().longValue() > minimumPeakDifference
-                    ) {
+                    )) {
                 // add peak to list
                 peaks.addFirst(currentTime);
                 peakWasRemovedOrAdded = true;
+                isStillCurrentPeak = true;
             }
+        } else {
+            isStillCurrentPeak = false;
         }
         while (peaks.size() > 0 && peaks.getLast().longValue() + PEAK_WINDOW < currentTime) {
             peaks.removeLast();
@@ -199,23 +219,6 @@ public class SoundMeter {
         return result;
     }
 
-
-    //private void setLoudnessStep(double loudness) {
-    //    loudness_window[rotating_loudness_pointer]=loudness;
-    //    rotating_loudness_pointer = (rotating_loudness_pointer+1)% LOUDNESS_WINDOW_SIZE;
-    //}
-
-    public boolean isLoudEnough() {
-        //int noOfMinorLoudness = 0;
-        //for ( int i = 0; i < loudness_window.length; i++) {
-        //    if (loudness_window[i]<LOUDNESS_THRESHOLD_AMP) {
-        //        noOfMinorLoudness++;
-        //    }
-        //}
-
-        //return noOfMinorLoudness < LOUDNESS_THRESHOLD_NR;
-        return true;
-    }
 
     private static double rootMeanSquared(short[] nums, Integer useCustomLength)
     {

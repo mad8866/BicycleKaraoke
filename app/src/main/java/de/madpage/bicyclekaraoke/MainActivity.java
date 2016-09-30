@@ -1,8 +1,11 @@
 package de.madpage.bicyclekaraoke;
 
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.ActivityInfo;
 import android.graphics.Color;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.Handler;
@@ -17,7 +20,6 @@ import android.widget.VideoView;
 
 import java.io.FileNotFoundException;
 import java.util.Date;
-import java.util.List;
 
 /**
  * This activity shows the video content and further views
@@ -28,10 +30,13 @@ public class MainActivity extends HidableActivity {
     private FrameLayout mVideoFrame;
     private ProgressBar mProgressBar;
     private VideoFinder videoFinder;
-    private int UI_UPDATE_FREQENCY = 20;
-    private int DESIRED_SPEED = 10;
+    private int UI_UPDATE_FREQENCY;
+    private int DESIRED_SPEED;
+    private int INITIALIZATION_PERIOD;
+    private int MAXIMUM_SPEED;
     private TextView tv_status;
     private TextView mVideoOverlay;
+    private MyScaleView mRulerView;
     private SoundMeter soundmeter = new SoundMeter(this);
     private Handler uiUpdateHandler = new Handler();
     private int[] VARIABLE_DESIRED_SPEED = null;
@@ -41,6 +46,12 @@ public class MainActivity extends HidableActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
+        MAXIMUM_SPEED = sharedPrefs.getInt("pref_key_maximum_speed", 30);
+
+        mRulerView = (MyScaleView) findViewById(R.id.my_scale);
+        mRulerView.setMaximumSpeed(MAXIMUM_SPEED);
 
         alertDialogBuilder = new AlertDialog.Builder(this);
         videoFinder = new VideoFinder(getContentResolver());
@@ -131,7 +142,11 @@ public class MainActivity extends HidableActivity {
         SharedPreferences sharedPrefs = PreferenceManager.getDefaultSharedPreferences(this);
         UI_UPDATE_FREQENCY = sharedPrefs.getInt("pref_key_tacho_refresh_frequency", 20);
         DESIRED_SPEED = sharedPrefs.getInt("pref_key_desired_speed", 10);
+        INITIALIZATION_PERIOD = sharedPrefs.getInt("pref_key_initialization_period", 18);
+        MAXIMUM_SPEED = sharedPrefs.getInt("pref_key_maximum_speed", 30);
+        mRulerView.setMaximumSpeed(MAXIMUM_SPEED);
         String variableDesiredSpeed = sharedPrefs.getString("pref_key_variable_desired_speed", "");
+        //boolean forceWiredHeadset = sharedPrefs.getBoolean("pref_key_force_wired_headset", true);
 
         // get speed array from splitted string
         VARIABLE_DESIRED_SPEED = null;
@@ -149,6 +164,7 @@ public class MainActivity extends HidableActivity {
         }
 
         try {
+            //forceWiredHeadset(forceWiredHeadset);
             String videoFile = videoFinder.randomVideo(true);
             mVideoView.setVideoPath(videoFile);
             mVideoView.start();
@@ -159,6 +175,18 @@ public class MainActivity extends HidableActivity {
             AlertDialog ad = alertDialogBuilder.create();
             ad.setMessage(e.getMessage());
             ad.show();
+        }
+    }
+
+    private void forceWiredHeadset(boolean enabled) {
+        if (enabled) {
+            AudioManager manager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
+            //if(manager.isWiredHeadsetOn())
+            //{
+            manager.setWiredHeadsetOn(true);
+            manager.setRouting(AudioManager.MODE_CURRENT, AudioManager.ROUTE_SPEAKER, AudioManager.ROUTE_ALL);
+            manager.setMode(AudioManager.MODE_CURRENT);
+            //}
         }
     }
 
@@ -183,6 +211,7 @@ public class MainActivity extends HidableActivity {
     }
 
     protected void refreshUi() {
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE);
         int current = mVideoView.getCurrentPosition();
         int duration = mVideoView.getDuration();
 
@@ -195,29 +224,25 @@ public class MainActivity extends HidableActivity {
 
         String currentStatus;
 
-        // = "HEY!\nMake some noise :-P";
-
-        //if (soundmeter.getLoudness() > soundmeter.LOUDNESS_THRESHOLD_AMP) {
-        //    Log.d("zeroCrossings", "calc_frequency:\n" + soundmeter.getCalc_frequency() + "\n\n\nloudness:\n" + soundmeter.getLoudness());
-
-        //    if (soundmeter.isLoudEnough()) {
-
         Double peaksPerSecond = soundmeter.getPeaksPerSecondRollingAverage();
 
         StringBuilder sb = new StringBuilder();
         sb.append("Loudness:\n")
-                .append(soundmeter.getLoudness())
+                .append(String.format("%1$.2f",soundmeter.getLoudness()))
                 .append("\n\nDu fährst:\n")
-                .append(peaksPerSecond)
+                .append(String.format("%1$.2f",peaksPerSecond*10.0))
                 .append("\n\nZiel Geschwindigkeit:\n")
-                .append(DESIRED_SPEED)
+                .append(DESIRED_SPEED * 10)
+                .append("\n\nPeaks:\n")
+                .append(soundmeter.peaksToString())
         ;
         currentStatus = sb.toString();
 
-        setVideoVisibility(peaksPerSecond / DESIRED_SPEED);
+        boolean isInInitializingPhase = (current/1000) < INITIALIZATION_PERIOD;
 
-        //    }
-        //}
+        setVideoVisibility(peaksPerSecond / DESIRED_SPEED, isInInitializingPhase);
+        mRulerView.setCurrentSpeedPoint((int)(peaksPerSecond*10.0));
+        mRulerView.setDesiredSpeedPoint(DESIRED_SPEED*10);
 
         tv_status.setText(currentStatus);
     }
@@ -226,28 +251,42 @@ public class MainActivity extends HidableActivity {
      * You will have best visibility if factor == 1.0
      * @param factor
      */
-    private void setVideoVisibility(double factor) {
-        double alphaOfCoverOverlay;
-        if (factor <= 1f) {
-            alphaOfCoverOverlay = 1.0 - Math.pow(factor, 16);
-            mVideoOverlay.setBackgroundColor(Color.BLACK);
+    private void setVideoVisibility(double factor, boolean isInInitializingPhase) {
+        double alphaOfCoverOverlay = 0.0;
+        if (isInInitializingPhase) {
+            alphaOfCoverOverlay = 0.0;
             mVideoOverlay.setTextColor(Color.WHITE);
         } else {
-            alphaOfCoverOverlay = 1.0 - Math.pow(factor - 2, 16);
-            mVideoOverlay.setBackgroundColor(Color.WHITE);
-            mVideoOverlay.setTextColor(Color.BLACK);
+            if (factor <= 1f) {
+                // fade to black
+                alphaOfCoverOverlay = 1.0 - Math.pow(factor, 16);
+                mVideoOverlay.setBackgroundColor(Color.BLACK);
+                mVideoOverlay.setTextColor(Color.WHITE);
+            } else {
+                // fade to white
+                alphaOfCoverOverlay = 1.0 - Math.pow(factor - 2, 16);
+                mVideoOverlay.setBackgroundColor(Color.WHITE);
+                mVideoOverlay.setTextColor(Color.BLACK);
+            }
+        }
+
+        // insert text in video frame
+        StringBuilder videoOverlayText = new StringBuilder();
+        if (isInInitializingPhase) {
+            videoOverlayText.append("Gleich gehts los! Mach dich bereit!\n");
         }
         if (factor < 0.8f) {
-            mVideoOverlay.setText("FAHR SCHNELLER!!!");
+            videoOverlayText.append("FAHR SCHNELLER!!!");
         } else if (factor > 1.2f) {
-            mVideoOverlay.setText("DU BIST ZU SCHNELL!!!");
+            videoOverlayText.append("DU BIST ZU SCHNELL!!!");
         } else {
-            mVideoOverlay.setText(""); // speed ok
+            // speed ok
         }
+        mVideoOverlay.setText(videoOverlayText.toString());
         mVideoOverlay.setAlpha((float)alphaOfCoverOverlay);
     }
 
     private void resetVideoVisibility() {
-        setVideoVisibility(1.0);
+        setVideoVisibility(1.0, true);
     }
 }

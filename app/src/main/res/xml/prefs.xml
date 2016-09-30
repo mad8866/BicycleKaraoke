@@ -11,6 +11,48 @@
             android:title="Tachometer signalupdate frequency" /-->
 
         <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_desired_speed"
+            android:title="Desired speed"
+            android:enabled="true"
+            android:defaultValue="5"
+
+            sample:msbp_minValue="1"
+            sample:msbp_maxValue="50"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="Hz"
+            sample:msbp_dialogEnabled="false"/>
+
+        <EditTextPreference
+            android:defaultValue="4,5,6,4,6,5,4"
+            android:key="pref_key_variable_desired_speed"
+            android:summary="Overrides desired speed, example: 5,6,7,8,7,6,5"
+            android:title="Variable desired speed" />
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_maximum_speed"
+            android:title="Maximum speed"
+            android:enabled="true"
+            android:defaultValue="10"
+
+            sample:msbp_minValue="5"
+            sample:msbp_maxValue="100"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="Hz"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
+            android:key="pref_key_initialization_period"
+            android:title="Period of time between hitting start and the actual game start"
+            android:enabled="true"
+            android:defaultValue="18"
+
+            sample:msbp_minValue="3"
+            sample:msbp_maxValue="60"
+            sample:msbp_interval="1"
+            sample:msbp_measurementUnit="s"
+            sample:msbp_dialogEnabled="false"/>
+
+        <com.pavelsikun.seekbarpreference.SeekBarPreference
             android:key="pref_key_peak_window_size"
             android:title="Peak window size"
             android:summary="The tachometer works by counting clicks/second. Clicks older than this will be deleted."
@@ -28,7 +70,7 @@
             android:title="Loudness threshold"
             android:summary="How loud must a click be to get counted"
             android:enabled="true"
-            android:defaultValue="300"
+            android:defaultValue="1000"
 
             sample:msbp_minValue="50"
             sample:msbp_maxValue="2000"
@@ -53,41 +95,11 @@
             android:key="pref_key_signal_calc_frequency"
             android:title="Calculate speed frequency"
             android:enabled="true"
-            android:defaultValue="400"
+            android:defaultValue="1000"
 
             sample:msbp_minValue="50"
             sample:msbp_maxValue="5000"
             sample:msbp_interval="100"
-            sample:msbp_measurementUnit="Hz"
-            sample:msbp_dialogEnabled="false"/>
-
-        <com.pavelsikun.seekbarpreference.SeekBarPreference
-            android:key="pref_key_desired_speed"
-            android:title="Desired speed"
-            android:enabled="true"
-            android:defaultValue="10"
-
-            sample:msbp_minValue="1"
-            sample:msbp_maxValue="50"
-            sample:msbp_interval="1"
-            sample:msbp_measurementUnit="Hz"
-            sample:msbp_dialogEnabled="false"/>
-
-        <EditTextPreference
-            android:defaultValue=""
-            android:key="pref_key_variable_desired_speed"
-            android:summary="Overrides desired speed, example: 5,6,7,8,7,6,5"
-            android:title="Variable desired speed" />
-
-        <com.pavelsikun.seekbarpreference.SeekBarPreference
-            android:key="pref_key_maximum_speed"
-            android:title="Maximum speed"
-            android:enabled="true"
-            android:defaultValue="30"
-
-            sample:msbp_minValue="5"
-            sample:msbp_maxValue="100"
-            sample:msbp_interval="1"
             sample:msbp_measurementUnit="Hz"
             sample:msbp_dialogEnabled="false"/>
 
@@ -111,6 +123,13 @@
             android:selectable="true"
             android:defaultValue="true"
             />
+
+        <!--CheckBoxPreference
+            android:key="pref_key_force_wired_headset"
+            android:title="Force wired headset"
+            android:selectable="true"
+            android:defaultValue="true"
+            /-->
 
         <fortyonepost.com.resetpreferencesdialog.ResetDefDiagPref
             android:dialogMessage="Revert all values to their defaults?"
